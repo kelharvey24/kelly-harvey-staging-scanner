@@ -2,220 +2,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1">
-  <title>Kelly Harvey Staging Scanner</title>
-
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #faf9f6;
-      color: #222;
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-    }
-
-    h2 {
-      text-align: center;
-    }
-
-    label {
-      display: block;
-      margin-top: 16px;
-      font-weight: bold;
-    }
-
-    button, input, select, textarea {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      box-sizing: border-box;
-      margin-top: 8px;
-      border-radius: 6px;
-    }
-
-    button {
-      background: #222;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    input, select, textarea {
-      border: 1px solid #ccc;
-      background: white;
-    }
-
-    #reader {
-      width: 100%;
-      margin-top: 15px;
-    }
-
-    #message {
-      margin-top: 15px;
-      font-weight: bold;
-    }
-
-    .notice {
-      background: #eeeae3;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 18px;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelly Harvey Staging Scanner</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 500px;
+    margin: auto;
+    padding: 20px;
+    background: #faf9f6;
+    color: #222;
+  }
+  h2 { text-align: center; }
+  label {
+    display: block;
+    margin-top: 16px;
+    font-weight: bold;
+  }
+  button, input, select, textarea {
+    width: 100%;
+    padding: 13px;
+    box-sizing: border-box;
+    margin-top: 8px;
+    font-size: 16px;
+    border-radius: 6px;
+  }
+  button {
+    background: #222;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; }
+  input, select, textarea {
+    background: white;
+    border: 1px solid #ccc;
+  }
+  #reader { width: 100%; margin-top: 15px; }
+  #message { font-weight: bold; margin-top: 15px; }
+  .notice {
+    background: #eeeae3;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 18px;
+    font-size: 14px;
+  }
+</style>
 </head>
-
 <body>
-  <h2>Kelly Harvey Staging</h2>
-  <p>Barcode Inventory Scanner</p>
 
-  <button id="scanButton" onclick="startScanner()">
-    Scan Barcode
-  </button>
+<h2>Kelly Harvey Staging</h2>
+<p>Barcode Inventory Scanner</p>
 
-  <button id="stopButton" onclick="stopScanner()"
-          style="display:none">
-    Stop Camera
-  </button>
+<label for="cameraSelect">Choose Camera</label>
+<select id="cameraSelect">
+  <option value="">Automatic rear camera</option>
+</select>
 
-  <div id="reader"></div>
+<button id="refreshButton" onclick="loadCameras()">
+  Refresh Camera List
+</button>
 
-  <label for="itemId">Item ID</label>
-  <input id="itemId"
-         placeholder="CHR-001"
-         autocomplete="off">
+<button id="scanButton" onclick="startScanner()">
+  Scan Barcode
+</button>
 
-  <label for="action">Action</label>
-  <select id="action">
-    <option value="Check Out">Check Out</option>
-    <option value="Check In">Check In</option>
-  </select>
+<button id="stopButton" onclick="stopScanner()"
+        style="display:none">
+  Stop Camera
+</button>
 
-  <label for="location">Property / Storage Location</label>
-  <input id="location"
-         placeholder="Property address or Storage">
+<div id="reader"></div>
 
-  <label for="scannedBy">Scanned By</label>
-  <input id="scannedBy"
-         placeholder="Your name">
+<label for="itemId">Item ID</label>
+<input id="itemId" placeholder="CHR-001" autocomplete="off">
 
-  <label for="notes">Notes (optional)</label>
-  <textarea id="notes" rows="2"></textarea>
+<label for="action">Action</label>
+<select id="action">
+  <option value="Check Out">Check Out</option>
+  <option value="Check In">Check In</option>
+</select>
 
-  <button id="saveButton" disabled>
-    Save Movement (Connection Pending)
-  </button>
+<label for="location">Property / Storage Location</label>
+<input id="location" placeholder="Property address or Storage">
 
-  <div class="notice">
-    Barcode scanning is available.
-    Saving to Google Sheets will be enabled
-    after the secure connection is configured.
-  </div>
+<label for="scannedBy">Scanned By</label>
+<input id="scannedBy" placeholder="Your name">
 
-  <p id="message" role="status"
-     aria-live="polite"></p>
+<label for="notes">Notes (optional)</label>
+<textarea id="notes" rows="2"></textarea>
 
-  <script>
-    let scanner = null;
-    let scanning = false;
+<button disabled>
+  Save Movement (Connection Pending)
+</button>
 
-    const message = document.getElementById("message");
-    const scanButton = document.getElementById("scanButton");
-    const stopButton = document.getElementById("stopButton");
+<div class="notice">
+  Scanning is available. Saving to Google Sheets
+  will be enabled after the secure connection is configured.
+</div>
 
-    function showMessage(text) {
-      message.textContent = text;
+<p id="message" role="status" aria-live="polite"></p>
+
+<script>
+let scanner = null;
+let scanning = false;
+let starting = false;
+
+const message = document.getElementById("message");
+const scanButton = document.getElementById("scanButton");
+const stopButton = document.getElementById("stopButton");
+const cameraSelect = document.getElementById("cameraSelect");
+
+function showMessage(text) {
+  message.textContent = text;
+}
+
+async function loadCameras() {
+  if (scanning || starting) {
+    showMessage("Stop the camera before refreshing the list.");
+    return;
+  }
+
+  try {
+    if (typeof Html5Qrcode === "undefined") {
+      throw new Error("Scanner library did not load.");
     }
 
-    async function startScanner() {
-      if (scanning) return;
+    showMessage("Finding cameras...");
 
-      scanButton.disabled = true;
-      showMessage("Opening camera...");
+    const cameras = await Html5Qrcode.getCameras();
+    const previous = cameraSelect.value;
 
-      try {
-        if (typeof Html5Qrcode === "undefined") {
-          throw new Error("Scanner library did not load.");
-        }
+    cameraSelect.innerHTML = "";
+    cameraSelect.add(new Option(
+      "Automatic rear camera", ""
+    ));
 
-        scanner = new Html5Qrcode("reader", {
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.CODE_128
-          ],
-          verbose: false
-        });
+    cameras.forEach(function(camera, index) {
+      const label = camera.label ||
+        "Camera " + (index + 1);
+      cameraSelect.add(new Option(label, camera.id));
+    });
 
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: function(viewWidth, viewHeight) {
-              return {
-                width: Math.floor(viewWidth * 0.9),
-                height: Math.min(
-                  Math.floor(viewHeight * 0.5),
-                  180
-                )
-              };
-            },
-            aspectRatio: 1.777778
-          },
-          async function(decodedText) {
-            if (!scanning) return;
-
-            const code = decodedText.trim().toUpperCase();
-
-            document.getElementById("itemId").value = code;
-            showMessage("Scanned successfully: " + code);
-
-            await stopScanner(true);
-          },
-          function() {}
-        );
-
-        scanning = true;
-        stopButton.style.display = "block";
-        showMessage("Point camera at your barcode.");
-
-      } catch (error) {
-        showMessage("Camera error: " + String(error));
-        scanButton.disabled = false;
-        scanning = false;
-      }
+    if (Array.from(cameraSelect.options).some(
+      option => option.value === previous
+    )) {
+      cameraSelect.value = previous;
     }
 
-    async function stopScanner(keepMessage = false) {
-      try {
-        if (scanner && scanning) {
-          await scanner.stop();
-        }
+    showMessage(
+      cameras.length + " camera(s) found. Choose one and scan."
+    );
+  } catch (error) {
+    showMessage("Camera list error: " + String(error));
+  }
+}
 
-        if (scanner) {
-          scanner.clear();
-        }
-      } catch (error) {
-        console.log(error);
-      }
+async function startScanner() {
+  if (scanning || starting) return;
 
+  starting = true;
+  scanButton.disabled = true;
+  showMessage("Opening camera...");
+
+  try {
+    if (typeof Html5Qrcode === "undefined") {
+      throw new Error("Scanner library did not load.");
+    }
+
+    scanner = new Html5Qrcode("reader", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.CODE_128
+      ],
+      verbose: false
+    });
+
+    const selectedCamera = cameraSelect.value ||
+      { facingMode: "environment" };
+
+    await scanner.start(
+      selectedCamera,
+      {
+        fps: 10,
+        qrbox: function(width, height) {
+          return {
+            width: Math.max(
+              1, Math.floor(width * 0.9)
+            ),
+            height: Math.max(
+              1, Math.min(Math.floor(height * 0.5), 180)
+            )
+          };
+        },
+        aspectRatio: 1.777778
+      },
+      async function(decodedText) {
+        if (!scanning) return;
+
+        const code = decodedText.trim().toUpperCase();
+        document.getElementById("itemId").value = code;
+        showMessage("Scanned successfully: " + code);
+
+        await stopScanner(true);
+      },
+      function() {}
+    );
+
+    scanning = true;
+    starting = false;
+    stopButton.style.display = "block";
+    showMessage("Point camera at your barcode.");
+  } catch (error) {
+    starting = false;
+    scanning = false;
+    scanButton.disabled = false;
+    showMessage("Camera error: " + String(error));
+
+    if (scanner) {
+      try { scanner.clear(); } catch (e) {}
       scanner = null;
-      scanning = false;
-      scanButton.disabled = false;
-      stopButton.style.display = "none";
-
-      if (!keepMessage) {
-        showMessage("Camera stopped.");
-      }
     }
-  </script>
+  }
+}
+
+async function stopScanner(keepMessage = false) {
+  if (starting) return;
+
+  try {
+    if (scanner && scanning) {
+      await scanner.stop();
+    }
+    if (scanner) scanner.clear();
+  } catch (error) {
+    console.log(error);
+  }
+
+  scanner = null;
+  scanning = false;
+  scanButton.disabled = false;
+  stopButton.style.display = "none";
+
+  if (!keepMessage) {
+    showMessage("Camera stopped.");
+  }
+}
+</script>
 </body>
 </html>
