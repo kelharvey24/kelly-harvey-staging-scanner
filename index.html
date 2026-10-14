@@ -1,94 +1,169 @@
 index.html
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
   <title>Kelly Harvey Staging Scanner</title>
+
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
       background: #faf9f6;
       color: #222;
-      padding: 20px;
-      max-width: 480px;
+      max-width: 500px;
       margin: auto;
+      padding: 20px;
     }
+
     h2 { text-align: center; }
+
     button, input {
       width: 100%;
       padding: 14px;
       font-size: 16px;
       box-sizing: border-box;
       margin-top: 12px;
+      border-radius: 6px;
     }
+
     button {
       background: #222;
       color: white;
       border: none;
-      border-radius: 6px;
     }
-    #reader { margin-top: 20px; }
-    #message { margin-top: 16px; }
+
+    button:disabled { opacity: 0.5; }
+
+    input { border: 1px solid #ccc; }
+
+    #reader {
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    #message {
+      margin-top: 15px;
+      font-weight: bold;
+    }
   </style>
 </head>
+
 <body>
   <h2>Kelly Harvey Staging</h2>
   <p>Barcode Inventory Scanner</p>
 
-  <button onclick="startScanner()">Scan Barcode</button>
+  <button id="scanButton" onclick="startScanner()">
+    Scan Barcode
+  </button>
+
+  <button id="stopButton" onclick="stopScanner()"
+          style="display:none">
+    Stop Camera
+  </button>
+
   <div id="reader"></div>
 
   <label for="itemId">Item ID</label>
-  <input id="itemId" placeholder="CHR-001">
+  <input id="itemId"
+         placeholder="CHR-001"
+         autocomplete="off">
 
   <p id="message" role="status"></p>
 
   <script>
     let scanner = null;
+    let scanning = false;
+
+    const message = document.getElementById("message");
+    const scanButton = document.getElementById("scanButton");
+    const stopButton = document.getElementById("stopButton");
+
+    function showMessage(text) {
+      message.textContent = text;
+    }
 
     async function startScanner() {
-      const message = document.getElementById("message");
-      message.textContent = "Opening camera...";
+      if (scanning) return;
+
+      scanButton.disabled = true;
+      showMessage("Opening camera...");
 
       try {
-        if (scanner) {
-          try {
-            await scanner.stop();
-          } catch (e) {}
-          scanner.clear();
+        if (typeof Html5Qrcode === "undefined") {
+          throw new Error("Scanner library did not load.");
         }
 
-        scanner = new Html5Qrcode("reader");
+        scanner = new Html5Qrcode("reader", {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128
+          ],
+          verbose: false
+        });
 
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 10,
-  qrbox: { width: 300, height: 160 },
-  formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
-  videoConstraints: {
-    facingMode: "environment",
-    width: { ideal: 1920 },
-    height: { ideal: 1080 }
-  }
-},
-          async (decodedText) => {
-            document.getElementById("itemId").value =
-              decodedText.trim().toUpperCase();
-
-            message.textContent = "Barcode scanned successfully!";
-
-            try {
-              await scanner.stop();
-              scanner.clear();
-            } catch (e) {}
+          {
+            fps: 10,
+            qrbox: function(viewWidth, viewHeight) {
+              return {
+                width: Math.floor(viewWidth * 0.9),
+                height: Math.min(
+                  Math.floor(viewHeight * 0.5),
+                  180
+                )
+              };
+            },
+            aspectRatio: 1.777778
           },
-          () => {}
+          async function(decodedText) {
+            if (!scanning) return;
+
+            const code = decodedText.trim().toUpperCase();
+
+            document.getElementById("itemId").value = code;
+            showMessage("Scanned successfully: " + code);
+
+            await stopScanner(true);
+          },
+          function() {}
         );
+
+        scanning = true;
+        stopButton.style.display = "block";
+        showMessage("Point camera at your barcode.");
+
       } catch (error) {
-        message.textContent = "Camera error: " + String(error);
+        showMessage("Camera error: " + String(error));
+        scanButton.disabled = false;
+        scanning = false;
+      }
+    }
+
+    async function stopScanner(keepMessage = false) {
+      try {
+        if (scanner && scanning) {
+          await scanner.stop();
+        }
+        if (scanner) {
+          scanner.clear();
+        }
+      } catch (error) {
+        console.log(error);
+      }
+
+      scanner = null;
+      scanning = false;
+      scanButton.disabled = false;
+      stopButton.style.display = "none";
+
+      if (!keepMessage) {
+        showMessage("Camera stopped.");
       }
     }
   </script>
