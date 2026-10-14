@@ -1,0 +1,88 @@
+index.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kelly Harvey Staging Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #faf9f6;
+      color: #222;
+      padding: 20px;
+      max-width: 480px;
+      margin: auto;
+    }
+    h2 { text-align: center; }
+    button, input {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin-top: 12px;
+    }
+    button {
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    #reader { margin-top: 20px; }
+    #message { margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Kelly Harvey Staging</h2>
+  <p>Barcode Inventory Scanner</p>
+
+  <button onclick="startScanner()">Scan Barcode</button>
+  <div id="reader"></div>
+
+  <label for="itemId">Item ID</label>
+  <input id="itemId" placeholder="CHR-001">
+
+  <p id="message" role="status"></p>
+
+  <script>
+    let scanner = null;
+
+    async function startScanner() {
+      const message = document.getElementById("message");
+      message.textContent = "Opening camera...";
+
+      try {
+        if (scanner) {
+          try {
+            await scanner.stop();
+          } catch (e) {}
+          scanner.clear();
+        }
+
+        scanner = new Html5Qrcode("reader");
+
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 120 } },
+          async (decodedText) => {
+            document.getElementById("itemId").value =
+              decodedText.trim().toUpperCase();
+
+            message.textContent = "Barcode scanned successfully!";
+
+            try {
+              await scanner.stop();
+              scanner.clear();
+            } catch (e) {}
+          },
+          () => {}
+        );
+      } catch (error) {
+        message.textContent = "Camera error: " + String(error);
+      }
+    }
+  </script>
+</body>
+</html>
